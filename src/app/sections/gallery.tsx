@@ -146,7 +146,7 @@ const Gallery: React.FC = () => {
 
         {/* Overlapping Photo Gallery */}
         <div className="relative h-[800px] mx-auto max-w-6xl scale-[0.8]">
-          <div className="absolute -top-[7vw] right-0 p-4 flex flex-col items-end text-[40px]/[45px]">
+          <div className="absolute -top-[vw] right-0 p-4 flex flex-col items-end text-[40px]/[45px]">
             <p className=" font-extrabold bg-gradient-to-br from-[#01ACA6] to-[#184980] bg-clip-text text-transparent">
               Past
             </p>
@@ -214,7 +214,7 @@ const Gallery: React.FC = () => {
         </div>
 
         {/* Mission Statement */}
-        <div className="text-center mt-20 relative z-10">
+        {/* <div className="text-center mt-20 relative z-10">
           <div className="bg-white rounded-2xl shadow-lg p-8 max-w-4xl mx-auto">
             <h3 className="text-2xl font-bold text-gray-800 mb-4">
               Misi Lab Komputer Keliling
@@ -226,7 +226,6 @@ const Gallery: React.FC = () => {
               praktis.
             </p>
 
-            {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8">
               <div className="text-center">
                 <div className="text-3xl font-bold text-blue-600 mb-1">
@@ -250,14 +249,14 @@ const Gallery: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Call to Action */}
-        <div className="text-center mt-12">
+        {/* <div className="text-center mt-12">
           <button className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-4 rounded-full font-semibold hover:from-blue-700 hover:to-cyan-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
             Bergabung dengan Misi Kami
           </button>
-        </div>
+        </div> */}
       </div>
     </section>
   );
