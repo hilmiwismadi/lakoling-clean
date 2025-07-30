@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 interface GalleryItem {
   id: number;
@@ -18,6 +18,24 @@ interface GalleryItem {
 
 const Gallery: React.FC = () => {
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const startX = useRef(0);
+  const currentX = useRef(0);
+  const isDragging = useRef(false);
+
+  // Check if mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Data foto kegiatan Lab Komputer Keliling dengan posisi overlapping
   const galleryItems: GalleryItem[] = [
@@ -136,127 +154,243 @@ const Gallery: React.FC = () => {
     },
   ];
 
-  return (
-    <section className="py-20 px-4 bg-white overflow-hidden">
-      <div className="max-w-7xl mx-auto">
-        <div className="absolute top-20 left-40 w-[400px] h-[400px] bg-gradient-to-br from-[#1F9DB6] to-[#ffffff00] rounded-full blur-3xl opacity-40 pointer-events-none z-0"></div>
-        <div className="absolute top-70 right-20 w-[400px] h-[400px] bg-gradient-to-br from-[#1F9DB6] to-[#ffffff00] rounded-full blur-3xl opacity-40 pointer-events-none z-0"></div>
+  // Touch/Mouse handlers for mobile carousel
+  const handleStart = (clientX: number) => {
+    isDragging.current = true;
+    startX.current = clientX;
+    currentX.current = clientX;
+  };
 
-        {/* Header Section */}
+  const handleMove = (clientX: number) => {
+    if (!isDragging.current || !carouselRef.current) return;
+    
+    currentX.current = clientX;
+    const diff = currentX.current - startX.current;
+    const slideWidth = carouselRef.current.offsetWidth;
+    const currentTranslate = -currentSlide * slideWidth + diff;
+    
+    carouselRef.current.style.transform = `translateX(${currentTranslate}px)`;
+  };
 
-        {/* Overlapping Photo Gallery */}
-        <div className="relative h-[800px] mx-auto max-w-6xl scale-[0.8]">
-          <div className="absolute -top-[vw] right-0 p-4 flex flex-col items-end text-[40px]/[45px]">
-            <p className=" font-extrabold bg-gradient-to-br from-[#01ACA6] to-[#184980] bg-clip-text text-transparent">
-              Past
-            </p>
-            <p className=" font-extrabold bg-gradient-to-br from-[#01ACA6] to-[#184980] bg-clip-text text-transparent">
-              Projects
-            </p>
+  const handleEnd = () => {
+    if (!isDragging.current || !carouselRef.current) return;
+    
+    isDragging.current = false;
+    const diff = currentX.current - startX.current;
+    const threshold = 50;
+    
+    if (Math.abs(diff) > threshold) {
+      if (diff > 0 && currentSlide > 0) {
+        setCurrentSlide(currentSlide - 1);
+      } else if (diff < 0 && currentSlide < galleryItems.length - 1) {
+        setCurrentSlide(currentSlide + 1);
+      }
+    }
+    
+    // Reset transform
+    carouselRef.current.style.transform = `translateX(-${currentSlide * 100}%)`;
+  };
+
+  // Touch events
+  const handleTouchStart = (e: React.TouchEvent) => {
+    handleStart(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    handleMove(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    handleEnd();
+  };
+
+  // Mouse events
+  const handleMouseDown = (e: React.MouseEvent) => {
+    handleStart(e.clientX);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    handleMove(e.clientX);
+  };
+
+  const handleMouseUp = () => {
+    handleEnd();
+  };
+
+  const handleMouseLeave = () => {
+    handleEnd();
+  };
+
+  // Navigate to specific slide
+  const goToSlide = (index: number) => {
+    setCurrentSlide(index);
+  };
+
+  // Update carousel position when currentSlide changes
+  useEffect(() => {
+    if (carouselRef.current && isMobile) {
+      carouselRef.current.style.transform = `translateX(-${currentSlide * 100}%)`;
+    }
+  }, [currentSlide, isMobile]);
+
+  const renderDesktopGallery = () => (
+    <div className="relative h-[800px] mx-auto max-w-6xl scale-[0.8]">
+      <div className="absolute -top-[vw] right-0 p-4 flex flex-col items-end text-[40px]/[45px]">
+        <p className="font-extrabold bg-gradient-to-br from-[#01ACA6] to-[#184980] bg-clip-text text-transparent">
+          Past
+        </p>
+        <p className="font-extrabold bg-gradient-to-br from-[#01ACA6] to-[#184980] bg-clip-text text-transparent">
+          Projects
+        </p>
+      </div>
+
+      {galleryItems.map((item) => (
+        <div
+          key={item.id}
+          className={`absolute cursor-pointer transition-all duration-500 ease-out group ${
+            hoveredItem === item.id ? "z-50" : ""
+          }`}
+          style={{
+            top: item.position.top,
+            left: item.position.left,
+            transform: `rotate(${item.position.rotation}) ${
+              hoveredItem === item.id ? "scale(1.1)" : "scale(1)"
+            }`,
+            zIndex: hoveredItem === item.id ? 50 : item.position.zIndex,
+            width: item.position.width,
+            height: item.position.height,
+          }}
+          onMouseEnter={() => setHoveredItem(item.id)}
+          onMouseLeave={() => setHoveredItem(null)}
+        >
+          <div className="relative w-full h-full">
+            <div className="w-full h-full bg-white/10 backdrop-blur-md p-3 shadow-xl rounded-lg border border-white/40 transform transition-all duration-300 group-hover:shadow-2xl">
+              <img
+                src={item.image}
+                alt={item.title}
+                className="w-full h-full object-cover rounded-md"
+              />
+            </div>
           </div>
+        </div>
+      ))}
+    </div>
+  );
 
+  const renderMobileCarousel = () => (
+    <div className="relative w-full">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-extrabold bg-gradient-to-br from-[#01ACA6] to-[#184980] bg-clip-text text-transparent">
+          Past Projects
+        </h2>
+      </div>
+
+      {/* Carousel Container */}
+      <div className="relative overflow-hidden rounded-2xl">
+        <div
+          ref={carouselRef}
+          className="flex transition-transform duration-300 ease-out"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onMouseDown={handleMouseDown}
+          onMouseMove={isDragging.current ? handleMouseMove : undefined}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+          style={{
+            transform: `translateX(-${currentSlide * 100}%)`,
+            cursor: isDragging.current ? 'grabbing' : 'grab'
+          }}
+        >
           {galleryItems.map((item) => (
             <div
               key={item.id}
-              className={`absolute cursor-pointer transition-all duration-500 ease-out group ${
-                hoveredItem === item.id ? "z-50" : ""
-              }`}
-              style={{
-                top: item.position.top,
-                left: item.position.left,
-                transform: `rotate(${item.position.rotation}) ${
-                  hoveredItem === item.id ? "scale(1.1)" : "scale(1)"
-                }`,
-                zIndex: hoveredItem === item.id ? 50 : item.position.zIndex,
-                width: item.position.width,
-                height: item.position.height,
-              }}
-              onMouseEnter={() => setHoveredItem(item.id)}
-              onMouseLeave={() => setHoveredItem(null)}
+              className="w-full flex-shrink-0 px-4"
             >
-              {/* Photo Container */}
-              <div className="relative w-full h-full">
-                {/* Photo Frame */}
-                <div className="w-full h-full bg-white/10 backdrop-blur-md p-3 shadow-xl rounded-lg border border-white/40 transform transition-all duration-300 group-hover:shadow-2xl">
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl border border-white/40 overflow-hidden">
+                <div className="aspect-[4/3] overflow-hidden">
                   <img
                     src={item.image}
                     alt={item.title}
-                    className="w-full h-full object-cover rounded-md"
+                    className="w-full h-full object-cover"
+                    draggable={false}
                   />
                 </div>
-
-                {/* Hover Overlay with Info */}
-                {/* <div className={`absolute inset-0 bg-black bg-opacity-80 rounded-lg flex items-center justify-center p-4 transition-all duration-300 ${
-                  hoveredItem === item.id ? 'opacity-100' : 'opacity-0'
-                }`}>
-                  <div className="text-white text-center">
-                    <h3 className="text-xl font-bold mb-2">{item.title}</h3>
-                    <p className="text-sm leading-relaxed">{item.description}</p>
-                    <div className="mt-3">
-                      <button className="bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors">
-                        Lihat Detail
-                      </button>
-                    </div>
-                  </div>
-                </div> */}
-
-                {/* Photo Caption (like Polaroid) */}
-                {/* <div className="absolute -bottom-2 left-3 right-3 bg-white p-2 shadow-md">
-                  <p className="text-xs text-gray-600 text-center font-medium truncate">
+                <div className="p-6">
+                  <h3 className="text-xl font-bold text-gray-800 mb-3">
                     {item.title}
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    {item.description}
                   </p>
-                </div> */}
+                </div>
               </div>
             </div>
           ))}
-
-          {/* Decorative Elements */}
         </div>
+      </div>
 
-        {/* Mission Statement */}
-        {/* <div className="text-center mt-20 relative z-10">
-          <div className="bg-white rounded-2xl shadow-lg p-8 max-w-4xl mx-auto">
-            <h3 className="text-2xl font-bold text-gray-800 mb-4">
-              Misi Lab Komputer Keliling
-            </h3>
-            <p className="text-gray-600 leading-relaxed mb-6">
-              Memberikan akses teknologi dan pendidikan digital kepada
-              masyarakat di daerah terpencil, membantu mengurangi kesenjangan
-              digital, dan memberdayakan komunitas lokal melalui pelatihan
-              praktis.
-            </p>
+      {/* Dots Indicator */}
+      <div className="flex justify-center space-x-2 mt-6">
+        {galleryItems.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => goToSlide(index)}
+            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+              index === currentSlide
+                ? 'bg-gradient-to-r from-[#01ACA6] to-[#184980] scale-125'
+                : 'bg-gray-300 hover:bg-gray-400'
+            }`}
+            aria-label={`Go to slide ${index + 1}`}
+          />
+        ))}
+      </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600 mb-1">
-                  150+
-                </div>
-                <div className="text-sm text-gray-500">Lokasi Dikunjungi</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-cyan-500 mb-1">
-                  2000+
-                </div>
-                <div className="text-sm text-gray-500">Peserta Terlatih</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600 mb-1">50+</div>
-                <div className="text-sm text-gray-500">Program Selesai</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-cyan-500 mb-1">3+</div>
-                <div className="text-sm text-gray-500">Tahun Beroperasi</div>
-              </div>
-            </div>
-          </div>
-        </div> */}
+      {/* Navigation Arrows */}
+      <button
+        onClick={() => goToSlide(Math.max(0, currentSlide - 1))}
+        disabled={currentSlide === 0}
+        className={`absolute left-2 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 backdrop-blur-md border border-white/40 flex items-center justify-center transition-all duration-300 ${
+          currentSlide === 0 
+            ? 'opacity-50 cursor-not-allowed' 
+            : 'hover:bg-white/30 hover:scale-110'
+        }`}
+        aria-label="Previous slide"
+      >
+        <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
 
-        {/* Call to Action */}
-        {/* <div className="text-center mt-12">
-          <button className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-4 rounded-full font-semibold hover:from-blue-700 hover:to-cyan-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
-            Bergabung dengan Misi Kami
-          </button>
-        </div> */}
+      <button
+        onClick={() => goToSlide(Math.min(galleryItems.length - 1, currentSlide + 1))}
+        disabled={currentSlide === galleryItems.length - 1}
+        className={`absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 backdrop-blur-md border border-white/40 flex items-center justify-center transition-all duration-300 ${
+          currentSlide === galleryItems.length - 1 
+            ? 'opacity-50 cursor-not-allowed' 
+            : 'hover:bg-white/30 hover:scale-110'
+        }`}
+        aria-label="Next slide"
+      >
+        <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    </div>
+  );
+
+  return (
+    <section className="py-20 px-4 bg-white overflow-hidden">
+      <div className="max-w-7xl mx-auto">
+        {/* Background Elements */}
+        <div className="absolute top-20 left-40 w-[400px] h-[400px] bg-gradient-to-br from-[#1F9DB6] to-[#ffffff00] rounded-full blur-3xl opacity-40 pointer-events-none z-0"></div>
+        <div className="absolute top-70 right-20 w-[400px] h-[400px] bg-gradient-to-br from-[#1F9DB6] to-[#ffffff00] rounded-full blur-3xl opacity-40 pointer-events-none z-0"></div>
+
+        {/* Conditional Rendering */}
+        <div className="relative z-10">
+          {isMobile ? renderMobileCarousel() : renderDesktopGallery()}
+        </div>
       </div>
     </section>
   );
