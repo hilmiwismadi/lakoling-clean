@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 
 interface GalleryItem {
   id: number;
@@ -20,10 +20,6 @@ const Gallery: React.FC = () => {
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
-  const carouselRef = useRef<HTMLDivElement>(null);
-  const startX = useRef(0);
-  const currentX = useRef(0);
-  const isDragging = useRef(false);
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -154,84 +150,18 @@ const Gallery: React.FC = () => {
     },
   ];
 
-  // Touch/Mouse handlers for mobile carousel
-  const handleStart = (clientX: number) => {
-    isDragging.current = true;
-    startX.current = clientX;
-    currentX.current = clientX;
+  // Navigation functions
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % galleryItems.length);
   };
 
-  const handleMove = (clientX: number) => {
-    if (!isDragging.current || !carouselRef.current) return;
-    
-    currentX.current = clientX;
-    const diff = currentX.current - startX.current;
-    const slideWidth = carouselRef.current.offsetWidth;
-    const currentTranslate = -currentSlide * slideWidth + diff;
-    
-    carouselRef.current.style.transform = `translateX(${currentTranslate}px)`;
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + galleryItems.length) % galleryItems.length);
   };
 
-  const handleEnd = () => {
-    if (!isDragging.current || !carouselRef.current) return;
-    
-    isDragging.current = false;
-    const diff = currentX.current - startX.current;
-    const threshold = 50;
-    
-    if (Math.abs(diff) > threshold) {
-      if (diff > 0 && currentSlide > 0) {
-        setCurrentSlide(currentSlide - 1);
-      } else if (diff < 0 && currentSlide < galleryItems.length - 1) {
-        setCurrentSlide(currentSlide + 1);
-      }
-    }
-    
-    // Reset transform
-    carouselRef.current.style.transform = `translateX(-${currentSlide * 100}%)`;
-  };
-
-  // Touch events
-  const handleTouchStart = (e: React.TouchEvent) => {
-    handleStart(e.touches[0].clientX);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    handleMove(e.touches[0].clientX);
-  };
-
-  const handleTouchEnd = () => {
-    handleEnd();
-  };
-
-  // Mouse events
-  const handleMouseDown = (e: React.MouseEvent) => {
-    handleStart(e.clientX);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    handleMove(e.clientX);
-  };
-
-  const handleMouseUp = () => {
-    handleEnd();
-  };
-
-  const handleMouseLeave = () => {
-    handleEnd();
-  };
-
-  // Navigate to specific slide
   const goToSlide = (index: number) => {
     setCurrentSlide(index);
   };
-
-  // Update carousel position when currentSlide changes
-  useEffect(() => {
-    if (carouselRef.current && isMobile) {
-      carouselRef.current.style.transform = `translateX(-${currentSlide * 100}%)`;
-    }
-  }, [currentSlide, isMobile]);
 
   const renderDesktopGallery = () => (
     <div className="relative h-[800px] mx-auto max-w-6xl scale-[0.8]">
@@ -277,8 +207,9 @@ const Gallery: React.FC = () => {
     </div>
   );
 
-  const renderMobileCarousel = () => (
-    <div className="relative w-full">
+  // Alternative 1: Simple Card Stack with Fade Transition
+  const renderCardStack = () => (
+    <div className="relative w-full max-w-md mx-auto">
       {/* Header */}
       <div className="text-center mb-8">
         <h2 className="text-3xl font-extrabold bg-gradient-to-br from-[#01ACA6] to-[#184980] bg-clip-text text-transparent">
@@ -286,97 +217,154 @@ const Gallery: React.FC = () => {
         </h2>
       </div>
 
-      {/* Carousel Container */}
-      <div className="relative overflow-hidden rounded-2xl">
-        <div
-          ref={carouselRef}
-          className="flex transition-transform duration-300 ease-out"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onMouseDown={handleMouseDown}
-          onMouseMove={isDragging.current ? handleMouseMove : undefined}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
-          style={{
-            transform: `translateX(-${currentSlide * 100}%)`,
-            cursor: isDragging.current ? 'grabbing' : 'grab'
-          }}
+      {/* Card Stack Container */}
+      <div className="relative h-[500px] rounded-2xl overflow-hidden">
+        {galleryItems.map((item, index) => (
+          <div
+            key={item.id}
+            className={`absolute inset-0 transition-all duration-500 ease-in-out ${
+              index === currentSlide 
+                ? 'opacity-100 transform scale-100' 
+                : 'opacity-0 transform scale-95'
+            }`}
+          >
+            <div className="h-full bg-white/10 backdrop-blur-md rounded-2xl shadow-xl border border-white/40 overflow-hidden">
+              <div className="h-[60%] overflow-hidden">
+                <img
+                  src={item.image}
+                  alt={item.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-6 h-[40%] flex flex-col justify-center">
+                <h3 className="text-xl font-bold text-gray-800 mb-3">
+                  {item.title}
+                </h3>
+                <p className="text-gray-600 leading-relaxed text-sm">
+                  {item.description}
+                </p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Navigation */}
+      <div className="flex justify-between items-center mt-6">
+        <button
+          onClick={prevSlide}
+          className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md border border-white/40 flex items-center justify-center hover:bg-white/30 transition-all duration-300"
         >
+          <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+
+        <div className="flex space-x-2">
+          {galleryItems.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goToSlide(index)}
+              className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                index === currentSlide
+                  ? 'bg-gradient-to-r from-[#01ACA6] to-[#184980] scale-125'
+                  : 'bg-gray-300 hover:bg-gray-400'
+              }`}
+            />
+          ))}
+        </div>
+
+        <button
+          onClick={nextSlide}
+          className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md border border-white/40 flex items-center justify-center hover:bg-white/30 transition-all duration-300"
+        >
+          <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+
+  // Alternative 2: Vertical Scrolling Grid
+  const renderVerticalGrid = () => (
+    <div className="w-full max-w-lg mx-auto">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-extrabold bg-gradient-to-br from-[#01ACA6] to-[#184980] bg-clip-text text-transparent">
+          Past Projects
+        </h2>
+      </div>
+
+      {/* Scrollable Grid */}
+      <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+        {galleryItems.map((item) => (
+          <div
+            key={item.id}
+            className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl border border-white/40 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]"
+          >
+            <div className="aspect-[4/3] overflow-hidden">
+              <img
+                src={item.image}
+                alt={item.title}
+                className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+              />
+            </div>
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-gray-800 mb-2">
+                {item.title}
+              </h3>
+              <p className="text-gray-600 leading-relaxed text-sm">
+                {item.description}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Alternative 3: CSS-only Horizontal Scroll
+  const renderHorizontalScroll = () => (
+    <div className="w-full">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-extrabold bg-gradient-to-br from-[#01ACA6] to-[#184980] bg-clip-text text-transparent">
+          Past Projects
+        </h2>
+      </div>
+
+      {/* Horizontal Scroll Container */}
+      <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+        <div className="flex space-x-6 px-4" style={{ width: 'max-content' }}>
           {galleryItems.map((item) => (
             <div
               key={item.id}
-              className="w-full flex-shrink-0 px-4"
+              className="flex-shrink-0 w-80 bg-white/10 backdrop-blur-md rounded-2xl shadow-xl border border-white/40 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-105"
             >
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl border border-white/40 overflow-hidden">
-                <div className="aspect-[4/3] overflow-hidden">
-                  <img
-                    src={item.image}
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                    draggable={false}
-                  />
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-800 mb-3">
-                    {item.title}
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    {item.description}
-                  </p>
-                </div>
+              <div className="aspect-[4/3] overflow-hidden">
+                <img
+                  src={item.image}
+                  alt={item.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-2">
+                  {item.title}
+                </h3>
+                <p className="text-gray-600 leading-relaxed text-sm">
+                  {item.description}
+                </p>
               </div>
             </div>
           ))}
         </div>
       </div>
-
-      {/* Dots Indicator */}
-      <div className="flex justify-center space-x-2 mt-6">
-        {galleryItems.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => goToSlide(index)}
-            className={`w-3 h-3 rounded-full transition-all duration-300 ${
-              index === currentSlide
-                ? 'bg-gradient-to-r from-[#01ACA6] to-[#184980] scale-125'
-                : 'bg-gray-300 hover:bg-gray-400'
-            }`}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
+      
+      <div className="text-center mt-4 text-sm text-gray-500">
+        ← Scroll horizontally to see more →
       </div>
-
-      {/* Navigation Arrows */}
-      <button
-        onClick={() => goToSlide(Math.max(0, currentSlide - 1))}
-        disabled={currentSlide === 0}
-        className={`absolute left-2 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 backdrop-blur-md border border-white/40 flex items-center justify-center transition-all duration-300 ${
-          currentSlide === 0 
-            ? 'opacity-50 cursor-not-allowed' 
-            : 'hover:bg-white/30 hover:scale-110'
-        }`}
-        aria-label="Previous slide"
-      >
-        <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
-
-      <button
-        onClick={() => goToSlide(Math.min(galleryItems.length - 1, currentSlide + 1))}
-        disabled={currentSlide === galleryItems.length - 1}
-        className={`absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 backdrop-blur-md border border-white/40 flex items-center justify-center transition-all duration-300 ${
-          currentSlide === galleryItems.length - 1 
-            ? 'opacity-50 cursor-not-allowed' 
-            : 'hover:bg-white/30 hover:scale-110'
-        }`}
-        aria-label="Next slide"
-      >
-        <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
     </div>
   );
 
@@ -384,12 +372,17 @@ const Gallery: React.FC = () => {
     <section className="py-20 px-4 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto">
         {/* Background Elements */}
-        <div className="absolute top-20 left-40 w-[400px] h-[400px] bg-gradient-to-br from-[#1F9DB6] to-[#ffffff00] rounded-full blur-3xl opacity-40 pointer-events-none z-0"></div>
-        <div className="absolute top-70 right-20 w-[400px] h-[400px] bg-gradient-to-br from-[#1F9DB6] to-[#ffffff00] rounded-full blur-3xl opacity-40 pointer-events-none z-0"></div>
-
+        
         {/* Conditional Rendering */}
         <div className="relative z-10">
-          {isMobile ? renderMobileCarousel() : renderDesktopGallery()}
+          {isMobile ? (
+            // Choose one of these alternatives:
+            renderCardStack()        // Option 1: Card stack with fade
+            // renderVerticalGrid()  // Option 2: Vertical scrolling
+            // renderHorizontalScroll() // Option 3: Horizontal scroll
+          ) : (
+            renderDesktopGallery()
+          )}
         </div>
       </div>
     </section>
