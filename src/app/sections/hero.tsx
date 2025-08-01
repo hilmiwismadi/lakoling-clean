@@ -43,14 +43,12 @@ const Hero = () => {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex-shrink-0">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-[#01ACA6] to-[#184980] rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">L</span>
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-[#184980]">Lakoling</h1>
-                  <p className="text-xs text-gray-600 -mt-1">Lab Komputer Keliling</p>
-                </div>
+              <div className="flex items-center">
+                <img 
+                  src="/images/logo-lakoling.png" 
+                  alt="Lakoling Logo" 
+                  className="h-10 w-auto"
+                />
               </div>
             </div>
 
@@ -138,7 +136,7 @@ const Hero = () => {
             </h1>
 
             {/* Subtitle */}
-            <div className="space-y-2 text-lg md:text-xl lg:text-2xl font-bold">
+            <div className="text-lg md:text-xl lg:text-2xl font-bold">
               <p>Dari desa, untuk desa.</p>
               <p className="font-bold">Gratis. Aksesibel. Nyata.</p>
             </div>
